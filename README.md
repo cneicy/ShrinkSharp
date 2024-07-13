@@ -1,0 +1,2 @@
+﻿# ShrinkSharp
+.Net6
