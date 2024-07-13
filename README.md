@@ -1,7 +1,7 @@
 ﻿# ShrinkSharp
 .NET6
 
-打包为Linux可执行文件请在项目文件夹下打开控制台输入<code>dotnet publish -c Release -r linux-cod</code>
+打包为Linux可执行文件请在项目文件夹下打开控制台输入<code>dotnet publish -c Release -r linux-x64</code>
 
 一代: https://github.com/bingling-sama/BakaHDT
 
