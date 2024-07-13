@@ -140,12 +140,35 @@ public class Commands
             if (text.Contains("/addcorpus") && text.StartsWith("/addcorpus"))
             {
                 var temp = text.Remove(0, 10);
-                var chain = MessageBuilder.Group(groupId).Text("已添加: "+temp);
-                _corpus.Add(temp);
-                SaveCorpus();
-                content.SendMessage(chain.Build());
+                if (_corpus.Contains(temp))
+                {
+                    var chain = MessageBuilder.Group(groupId).Text("已经存在: "+temp);
+                    content.SendMessage(chain.Build());
+                }
+                else
+                {
+                    var chain = MessageBuilder.Group(groupId).Text("已添加: "+temp);
+                    _corpus.Add(temp);
+                    content.SendMessage(chain.Build());
+                    SaveCorpus();
+                }
             }
-            
+
+            if (text.Contains("/delcorpus") && text.StartsWith("/delcorpus"))
+            {
+                var temp = text.Remove(0, 10);
+                if (_corpus.Remove(temp))
+                {
+                    var chain = MessageBuilder.Group(groupId).Text("已删除: " + temp);
+                    SaveCorpus();
+                    content.SendMessage(chain.Build());
+                }
+                else
+                {
+                    var chain = MessageBuilder.Group(groupId).Text("未找到此条语料");
+                    content.SendMessage(chain.Build());
+                }
+            }
         };
         return Task.CompletedTask;
     }
