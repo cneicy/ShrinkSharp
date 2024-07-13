@@ -9,22 +9,19 @@ namespace Shrink.Login;
 
 public class QrCode
 {
-    private static QrCode _instance;
-
-    // 锁对象，用于同步
-    private static readonly object _lock = new object();
-
-    // 私有构造函数，防止外部使用 new 关键字创建实例
+    private static QrCode? _instance;
+    
+    private static readonly object Lock = new();
+    
     private QrCode() { }
-
-    // 公有的静态方法，用于获取类的实例
-    public static QrCode Instance
+    
+    public static QrCode? Instance
     {
         get
         {
             // 双重检查锁定
             if (_instance != null) return _instance;
-            lock (_lock)
+            lock (Lock)
             {
                 _instance ??= new QrCode();
             }
@@ -63,9 +60,5 @@ public class QrCode
             await File.WriteAllBytesAsync("qr.png", qrCode.Value.QrCode);
             await Client.LoginByQrCode();
         }
-
-        /*var friendChain = MessageBuilder.Group(624487948)
-            .Text("Shrink Started!");
-        await client.SendMessage(friendChain.Build());*/
     }
 }

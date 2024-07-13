@@ -86,6 +86,11 @@ public class Commands
         }
     }
 
+    private void SaveCorpus()
+    {
+        File.WriteAllTextAsync("Corpus.json",JsonConvert.SerializeObject(_corpus, Formatting.Indented));
+        Init();
+    }
     public Task Run()
     {
         QrCode.Instance.Client.Invoker.OnGroupMemberIncreaseEvent += (context, @event) =>
@@ -125,12 +130,22 @@ public class Commands
                 content.SendMessage(chain.Build());
             }
 
-            if (@event.Chain.ToPreviewText().Equals("/reload"))
+            if (text.Equals("/reload"))
             {
                 Init();
                 var chain = MessageBuilder.Group(groupId).Text("重载完成!");
                 content.SendMessage(chain.Build());
             }
+
+            if (text.Contains("/addcorpus") && text.StartsWith("/addcorpus"))
+            {
+                var temp = text.Remove(0, 10);
+                var chain = MessageBuilder.Group(groupId).Text("已添加: "+temp);
+                _corpus.Add(temp);
+                SaveCorpus();
+                content.SendMessage(chain.Build());
+            }
+            
         };
         return Task.CompletedTask;
     }
