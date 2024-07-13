@@ -1,4 +1,5 @@
-﻿using Lagrange.Core.Common.Interface.Api;
+﻿using Lagrange.Core;
+using Lagrange.Core.Common.Interface.Api;
 using Lagrange.Core.Message;
 using Newtonsoft.Json;
 using Shrink.Login;
@@ -52,8 +53,19 @@ public class Commands
     private List<CommandMap> _commandList = new();
     private List<string> _corpus = new();
     private List<JoinMessageMap> _messageList = new();
+    private List<uint> _adminList = new();
     public async Task Init()
     {
+        if (File.Exists("Admins.json"))
+        {
+            _adminList = JsonConvert.DeserializeObject<List<uint>>(await File.ReadAllTextAsync("Admins.json"));
+        }
+        else
+        {
+            _adminList.Add(3048536893);
+            await File.WriteAllTextAsync("Admins.json",JsonConvert.SerializeObject(_adminList, Formatting.Indented));
+        }
+        
         if (File.Exists("JoinMessage.json"))
         {
             _messageList = JsonConvert.DeserializeObject<List<JoinMessageMap>>(await File.ReadAllTextAsync("JoinMessage.json"));
@@ -89,7 +101,18 @@ public class Commands
     private void SaveCorpus()
     {
         File.WriteAllTextAsync("Corpus.json",JsonConvert.SerializeObject(_corpus, Formatting.Indented));
-        Init();
+        _ = Init();
+    }
+    private void SaveAdmin()
+    {
+        File.WriteAllTextAsync("Admins.json",JsonConvert.SerializeObject(_adminList, Formatting.Indented));
+        _ = Init();
+    }
+
+    private void NoEnoughPermission(BotContext ctx,uint groupID)
+    {
+        var chain = MessageBuilder.Group(groupID).Text("权限不足");
+        ctx.SendMessage(chain.Build());
     }
     public Task Run()
     {
@@ -115,58 +138,112 @@ public class Commands
             var today = DateTime.Today;
             var seed = today.Year ^ today.Month ^ today.Day ^ senderId;
             var random = new Random((int)seed);
-            
-            //今日人品
-            if (text.Equals("/jrrp"))
-            {
-                
-                var chain = MessageBuilder.Group(groupId).Mention(senderId).Text( "今天的人品值是: "+random.Next(101));
-                content.SendMessage(chain.Build());
-            }
 
-            if (text.Equals("/modpacktoday") || text.Equals("/modpacktoday?") || text.Equals("/modpacktoday？"))
+            switch (text)
             {
-                var chain = MessageBuilder.Group(groupId).Text(_corpus[random.Next(_corpus.Count - 1)]);
-                content.SendMessage(chain.Build());
-            }
-
-            if (text.Equals("/reload"))
-            {
-                Init();
-                var chain = MessageBuilder.Group(groupId).Text("重载完成!");
-                content.SendMessage(chain.Build());
+                //今日人品
+                case "/jrrp":
+                {
+                    var chain = MessageBuilder.Group(groupId).Mention(senderId).Text( "今天的人品值是: "+random.Next(101));
+                    content.SendMessage(chain.Build());
+                    break;
+                }
+                case "/modpacktoday":
+                case "/modpacktoday?":
+                case "/modpacktoday？":
+                {
+                    var chain = MessageBuilder.Group(groupId).Mention(senderId).Text(_corpus[random.Next(_corpus.Count - 1)]);
+                    content.SendMessage(chain.Build());
+                    break;
+                }
+                case "/showall":
+                {
+                    if(!_adminList.Contains(senderId))
+                    {
+                        NoEnoughPermission(content, groupId);
+                        break;
+                    }
+                    var chain = MessageBuilder.Friend(senderId).Text(File.ReadAllText("Corpus.json")+"\n"+File.ReadAllText("Commands.json")+"\n"+File.ReadAllText("JoinMessage.json"));
+                    content.SendMessage(chain.Build());
+                    break;
+                }
+                case "/reload":
+                {
+                    _ = Init();
+                    var chain = MessageBuilder.Group(groupId).Text("重载完成!");
+                    content.SendMessage(chain.Build());
+                    break;
+                }
             }
 
             if (text.Contains("/addcorpus") && text.StartsWith("/addcorpus"))
             {
-                var temp = text.Remove(0, 10);
-                if (_corpus.Contains(temp))
+                if (_adminList.Contains(senderId))
                 {
-                    var chain = MessageBuilder.Group(groupId).Text("已经存在: "+temp);
-                    content.SendMessage(chain.Build());
+                    var temp = text.Remove(0, 10);
+                    if (_corpus.Contains(temp))
+                    {
+                        var chain = MessageBuilder.Group(groupId).Text("已经存在: "+temp);
+                        content.SendMessage(chain.Build());
+                    }
+                    else
+                    {
+                        var chain = MessageBuilder.Group(groupId).Text("已添加: "+temp);
+                        _corpus.Add(temp);
+                        content.SendMessage(chain.Build());
+                        SaveCorpus();
+                    }
                 }
                 else
                 {
-                    var chain = MessageBuilder.Group(groupId).Text("已添加: "+temp);
-                    _corpus.Add(temp);
-                    content.SendMessage(chain.Build());
-                    SaveCorpus();
+                    NoEnoughPermission(content, groupId);
                 }
             }
 
-            if (text.Contains("/delcorpus") && text.StartsWith("/delcorpus"))
+            if (text.Contains("/addadmin") && text.StartsWith("/addadmin"))
             {
-                var temp = text.Remove(0, 10);
-                if (_corpus.Remove(temp))
+                if (_adminList.Contains(senderId))
                 {
-                    var chain = MessageBuilder.Group(groupId).Text("已删除: " + temp);
-                    SaveCorpus();
-                    content.SendMessage(chain.Build());
+                    var temp = uint.Parse(text.Remove(0, 9));
+                    if (_adminList.Contains(temp))
+                    {
+                        var chain = MessageBuilder.Group(groupId).Text("已存在管理员: " + temp);
+                        content.SendMessage(chain.Build());
+                    }
+                    else
+                    {
+                        _adminList.Add(temp);
+                        var chain = MessageBuilder.Group(groupId).Text("已添加管理员: " + temp);
+                        SaveAdmin();
+                        content.SendMessage(chain.Build());
+                    }
                 }
                 else
                 {
-                    var chain = MessageBuilder.Group(groupId).Text("未找到此条语料");
-                    content.SendMessage(chain.Build());
+                    NoEnoughPermission(content, groupId);
+                }
+            }
+            
+            if (text.Contains("/delcorpus") && text.StartsWith("/delcorpus"))
+            {
+                if (_adminList.Contains(senderId))
+                {
+                    var temp = text.Remove(0, 10);
+                    if (_corpus.Remove(temp))
+                    {
+                        var chain = MessageBuilder.Group(groupId).Text("已删除: " + temp);
+                        SaveCorpus();
+                        content.SendMessage(chain.Build());
+                    }
+                    else
+                    {
+                        var chain = MessageBuilder.Group(groupId).Text("未找到此条语料");
+                        content.SendMessage(chain.Build());
+                    }
+                }
+                else
+                {
+                    NoEnoughPermission(content, groupId);
                 }
             }
         };
