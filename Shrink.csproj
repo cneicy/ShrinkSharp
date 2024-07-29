@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Lagrange.Core" Version="0.2.2" />
+      <PackageReference Include="Lagrange.Core" Version="0.3.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     </ItemGroup>
 
