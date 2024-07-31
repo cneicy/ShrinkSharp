@@ -13,9 +13,7 @@ public class QrCode
     
     private static readonly object Lock = new();
     
-    private QrCode() { }
-    
-    public static QrCode? Instance
+    public static QrCode Instance
     {
         get
         {
@@ -29,7 +27,7 @@ public class QrCode
         }
     }
 
-    public BotContext Client;
+    public BotContext? Client;
     public async Task Login()
     {
         var deviceInfo = Data.GetDeviceInfo();
@@ -43,13 +41,13 @@ public class QrCode
             Protocol = Protocols.Linux
         }, deviceInfo, keyStore);
 
-        Client.Invoker.OnBotLogEvent += (context, @event) =>
+        Client.Invoker.OnBotLogEvent += (_, @event) =>
         {
-            Utility.Console.ChangeColorByTitle(@event.Level);
+            @event.Level.ChangeColorByTitle();
             Console.WriteLine(@event.ToString());
         };
 
-        Client.Invoker.OnBotOnlineEvent += (context, @event) =>
+        Client.Invoker.OnBotOnlineEvent += (_, @event) =>
         {
             Console.WriteLine(@event.ToString());
             Data.SaveKeystore(Client.UpdateKeystore());
