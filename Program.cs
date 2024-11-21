@@ -1,4 +1,6 @@
-﻿using Shrink.Command;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Shrink.Command;
 using Shrink.Login;
 
 namespace Shrink;
@@ -9,8 +11,8 @@ public static class Program
     {
         /*var originalAssemblyPath = "Lagrange.Core.dll";
         var tempAssemblyPath = "ModifiedExternalAssembly.dll";
-        var oldUrl = "YOU NEED FIND IT BY YOURSELF";
-        var newUrl = "YOUR SIGN SERVER";
+        var oldUrl = "自己找";
+        var newUrl = "自己找";
 
         ModifyAssembly(originalAssemblyPath, tempAssemblyPath, oldUrl, newUrl);*/
 
@@ -18,32 +20,36 @@ public static class Program
         await Commands.Instance.Init();
         await Commands.Instance.Run();
     }
-    /*private static void ModifyAssembly(string originalAssemblyPath, string tempAssemblyPath, string oldUrl,
-        string newUrl)
+    /*private static void ModifyAssembly(string originalAssemblyPath, string tempAssemblyPath, string oldUrl, string newUrl)
     {
         var assembly = AssemblyDefinition.ReadAssembly(originalAssemblyPath);
         var module = assembly.MainModule;
-        // Windows请自行修改为WindowsSigner
-        var type = module.Types.FirstOrDefault(t => t.Name == "LinuxSigner");
-        if (type == null)
+
+        // 查找LinuxSigner类型
+        var linuxSignerType = module.Types.FirstOrDefault(t => t.Name == "LinuxSigner");
+        if (linuxSignerType == null)
         {
             Console.WriteLine("无LinuxSigner类型");
             return;
         }
 
-        var method = type.Methods.FirstOrDefault(m => m.Name == "Sign");
-        if (method == null)
+        // 查找构造函数
+        var constructor = linuxSignerType.Methods.FirstOrDefault(m => m.IsConstructor);
+        if (constructor == null)
         {
-            Console.WriteLine("无Sign方法");
+            Console.WriteLine("无构造函数");
             return;
         }
 
-        var ilProcessor = method.Body.GetILProcessor();
-        foreach (var instruction in method.Body.Instructions)
+        var ilProcessor = constructor.Body.GetILProcessor();
+        foreach (var instruction in constructor.Body.Instructions)
         {
-            if (instruction.OpCode != OpCodes.Ldstr || instruction.Operand is not string str || str != oldUrl) continue;
-            instruction.Operand = newUrl;
-            Console.WriteLine($"替换: {oldUrl}为{newUrl}");
+            // 检查是否是加载字符串操作
+            if (instruction.OpCode == OpCodes.Ldstr && instruction.Operand is string str && str == oldUrl)
+            {
+                instruction.Operand = newUrl; // 替换为新URL
+                Console.WriteLine($"替换: {oldUrl}为{newUrl}");
+            }
         }
 
         assembly.Write(tempAssemblyPath);
