@@ -5,11 +5,11 @@
   },
   {
     "Key": "/help",
-    "Value": "指令一览：\n/ping Bot存活测试\n/info 显示Bot资料\n/help 显示Bot帮助信息\n/jrrp 获取今日随机人品值[roll 0~100]\n/modpacktoday? 询问今日是否适合做包\n/ask 教你提问\n/pastebin pastebin使用方法\n/logs log相关\n/rules 显示群规\n/crtcmds CraftTweaker 部分常用指令使用方法\n/mtcmds MineTweaker 部分常用指令使用方法\n/whyvsc 为什么要使用 VisualStudio Code ？\n/links 实用链接"
+    "Value": "指令一览：\n/ping Bot存活测试\n/info 显示Bot资料\n/help 显示Bot帮助信息\n/jrrp 获取今日随机人品值[roll 0~100]\n/modpacktoday? 询问今日是否适合做包\n/ask 教你提问\n/pastebin pastebin使用方法\n/logs log相关\n/rules 显示群规\n/crtcmds CraftTweaker 部分常用指令使用方法\n/mtcmds MineTweaker 部分常用指令使用方法\n/whyvsc 为什么要使用 VisualStudio Code ？\n/links 实用链接\n--------\n以下为Bot管理员操作\n/addcorpus XXX 为modpacktoday添加语料\n/delcorpus XXX 为modpacktoday删除语料\n/addadmin xxx 为Bot添加管理员\n/showall 将Bot所有语料发送到私聊中"
   },
   {
     "Key": "/info",
-    "Value": "Shrink是由Eicy为Minecraft魔改交流群部署的QQ bot。\n语料和部分插件代码来自\nBakaHDT(https://github.com/bingling-sama/BakaHDT)\nChlorineSharp(https://github.com/GBLodb/ChlorineSharp)\nShrink(https://github.com/cneicy/Shrink)"
+    "Value": "Shrink是Eicy为Minecraft魔改交流群部署的QQ bot。\nShrink [ https://github.com/cneicy/ShrinkSharp ]\n语料和部分插件代码来自\nBakaHDT [ https://github.com/bingling-sama/BakaHDT ]\nChlorineSharp [ https://github.com/GBLodb/ChlorineSharp ]"
   },
   {
     "Key": "/ask",
