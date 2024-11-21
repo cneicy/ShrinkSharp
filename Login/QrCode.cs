@@ -28,8 +28,12 @@ public class QrCode
     }
 
     public BotContext? Client;
+    
+    // 登录方法
     public async Task Login()
     {
+        #region bot实例化
+
         var deviceInfo = Data.GetDeviceInfo();
         var keyStore = Data.LoadKeystore() ?? new BotKeystore();
 
@@ -41,17 +45,22 @@ public class QrCode
             Protocol = Protocols.Linux
         }, deviceInfo, keyStore);
 
+        #endregion
+        
+        // Log模式
         Client.Invoker.OnBotLogEvent += (_, @event) =>
         {
             @event.Level.ChangeColorByTitle();
             Console.WriteLine(@event.ToString());
         };
 
+        // bot信息保存，但存在bug未修复
         Client.Invoker.OnBotOnlineEvent += (_, @event) =>
         {
             Console.WriteLine(@event.ToString());
             Data.SaveKeystore(Client.UpdateKeystore());
         };
+        // 二维码生成，启动后在根目录下生成qr.png
         var qrCode = await Client.FetchQrCode();
         if (qrCode != null)
         {

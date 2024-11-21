@@ -6,6 +6,7 @@ using Shrink.Login;
 
 namespace Shrink.Command;
 
+// 命令数据类型
 public struct CommandMap
 {
     public string Key;
@@ -18,6 +19,7 @@ public struct CommandMap
     }
 }
 
+// 加入群后的消息数据类型
 public struct JoinMessageMap
 {
     public uint Key;
@@ -50,10 +52,13 @@ public class Commands
         }
     }
 
+    // todo 可以优化成字典储存
     private List<CommandMap> _commandList = new();
     private List<string> _corpus = new();
     private List<JoinMessageMap> _messageList = new();
     private List<uint> _adminList = new();
+    
+    // 文件初始化
     public async Task Init()
     {
         if (File.Exists("Admins.json"))
@@ -98,6 +103,7 @@ public class Commands
         }
     }
 
+    // 保存方法
     private void SaveCorpus()
     {
         File.WriteAllTextAsync("Corpus.json",JsonConvert.SerializeObject(_corpus, Formatting.Indented));
@@ -109,11 +115,14 @@ public class Commands
         _ = Init();
     }
 
+    // bot管理员
     private void NoEnoughPermission(BotContext ctx,uint groupID)
     {
         var chain = MessageBuilder.Group(groupID).Text("权限不足");
         ctx.SendMessage(chain.Build());
     }
+    
+    // 先Init后再运行
     public Task Run()
     {
         QrCode.Instance.Client.Invoker.OnGroupMemberIncreaseEvent += (context, @event) =>
