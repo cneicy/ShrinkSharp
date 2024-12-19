@@ -16,7 +16,7 @@ public static class Program
 
         ModifyAssembly(originalAssemblyPath, tempAssemblyPath, oldUrl, newUrl);*/
 
-        await QrCode.Instance.Login();
+        await BotService.Instance.Login();
         await Commands.Instance.Init();
         await Commands.Instance.Run();
     }

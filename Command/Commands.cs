@@ -6,39 +6,12 @@ using Shrink.Login;
 
 namespace Shrink.Command;
 
-// 命令数据类型
-public struct CommandMap
-{
-    public string Key;
-    public string Value;
-
-    public CommandMap(string key, string value)
-    {
-        Key = key;
-        Value = value;
-    }
-}
-
-// 加入群后的消息数据类型
-public struct JoinMessageMap
-{
-    public uint Key;
-    public string Value;
-    public JoinMessageMap(uint key, string value)
-    {
-        Key = key;
-        Value = value;
-    }
-}
-
 public class Commands
 {
     private static Commands? _instance;
-    
     private static readonly object Lock = new();
-    
     private Commands() { }
-    
+
     public static Commands Instance
     {
         get
@@ -52,97 +25,106 @@ public class Commands
         }
     }
 
-    // todo 可以优化成字典储存
-    private List<CommandMap> _commandList = new();
+    // 使用字典存储命令和群消息
+    private Dictionary<string, string> _commandDict = new();
     private List<string> _corpus = new();
-    private List<JoinMessageMap> _messageList = new();
-    private List<uint> _adminList = new();
-    
+    private Dictionary<uint, string> _messageDict = new();
+    private HashSet<uint> _adminSet = new();
+
     // 文件初始化
     public async Task Init()
     {
+        // 读取Admins.json
         if (File.Exists("Admins.json"))
         {
-            _adminList = JsonConvert.DeserializeObject<List<uint>>(await File.ReadAllTextAsync("Admins.json"));
+            _adminSet = new HashSet<uint>(JsonConvert.DeserializeObject<List<uint>>(await File.ReadAllTextAsync("Admins.json"))!);
         }
         else
         {
-            _adminList.Add(3048536893);
-            await File.WriteAllTextAsync("Admins.json",JsonConvert.SerializeObject(_adminList, Formatting.Indented));
-        }
-        
-        if (File.Exists("JoinMessage.json"))
-        {
-            _messageList = JsonConvert.DeserializeObject<List<JoinMessageMap>>(await File.ReadAllTextAsync("JoinMessage.json"));
-        }
-        else
-        {
-            _messageList.Add(new JoinMessageMap(620902312,"欢迎"));
-            await File.WriteAllTextAsync("JoinMessage.json",JsonConvert.SerializeObject(_messageList, Formatting.Indented));
-        }
-        
-        if (File.Exists("Commands.json"))
-        {
-            _commandList = JsonConvert.DeserializeObject<List<CommandMap>>(await File.ReadAllTextAsync("Commands.json"));
-        }
-        else
-        {
-            _commandList.Add(new CommandMap("/ping","Pong!"));
-            await File.WriteAllTextAsync("Commands.json",JsonConvert.SerializeObject(_commandList, Formatting.Indented));
+            _adminSet.Add(3048536893); // 默认管理员
+            await File.WriteAllTextAsync("Admins.json", JsonConvert.SerializeObject(_adminSet.ToList(), Formatting.Indented));
         }
 
-        if (File.Exists("Corpus.json"))
+        // 读取JoinMessage.json
+        if (File.Exists("JoinMessage.json"))
         {
-            _corpus = JsonConvert.DeserializeObject<List<string>>(await File.ReadAllTextAsync("Corpus.json"));
+            _messageDict = JsonConvert.DeserializeObject<List<KeyValuePair<uint, string>>>(await File.ReadAllTextAsync("JoinMessage.json"))!
+                .ToDictionary(msg => msg.Key, msg => msg.Value);
         }
         else
         {
-            _corpus.Add(" 你这辈子就只能做原生了。");
-            _corpus.Add(" 天灵灵地灵灵，魔改大仙快显灵。");
-            await File.WriteAllTextAsync("Corpus.json",JsonConvert.SerializeObject(_corpus, Formatting.Indented));
+            _messageDict.Add(620902312, "欢迎");
+            await File.WriteAllTextAsync("JoinMessage.json", JsonConvert.SerializeObject(_messageDict.Select(kv => new KeyValuePair<uint, string>(kv.Key, kv.Value)).ToList(), Formatting.Indented));
+        }
+
+        // 读取Commands.json
+        if (File.Exists("Commands.json"))
+        {
+            _commandDict = JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(await File.ReadAllTextAsync("Commands.json"))!
+                .ToDictionary(cmd => cmd.Key, cmd => cmd.Value);
+        }
+        else
+        {
+            _commandDict.Add("/ping", "Pong!");
+            await File.WriteAllTextAsync("Commands.json", JsonConvert.SerializeObject(_commandDict.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value)).ToList(), Formatting.Indented));
+        }
+
+        // 读取Corpus.json
+        if (File.Exists("Corpus.json"))
+        {
+            _corpus = JsonConvert.DeserializeObject<List<string>>(await File.ReadAllTextAsync("Corpus.json"))!;
+        }
+        else
+        {
+            _corpus.Add("你这辈子就只能做原生了。");
+            _corpus.Add("天灵灵地灵灵，魔改大仙快显灵。");
+            await File.WriteAllTextAsync("Corpus.json", JsonConvert.SerializeObject(_corpus, Formatting.Indented));
         }
     }
 
     // 保存方法
-    private void SaveCorpus()
+    private async Task SaveCorpus()
     {
-        File.WriteAllTextAsync("Corpus.json",JsonConvert.SerializeObject(_corpus, Formatting.Indented));
-        _ = Init();
-    }
-    private void SaveAdmin()
-    {
-        File.WriteAllTextAsync("Admins.json",JsonConvert.SerializeObject(_adminList, Formatting.Indented));
-        _ = Init();
+        await File.WriteAllTextAsync("Corpus.json", JsonConvert.SerializeObject(_corpus, Formatting.Indented));
+        await Init();
     }
 
-    // bot管理员
-    private void NoEnoughPermission(BotContext ctx,uint groupID)
+    private async Task SaveAdmin()
     {
-        var chain = MessageBuilder.Group(groupID).Text("权限不足");
+        await File.WriteAllTextAsync("Admins.json", JsonConvert.SerializeObject(_adminSet.ToList(), Formatting.Indented));
+        await Init();
+    }
+
+    // bot管理员权限检查
+    private void NoEnoughPermission(BotContext ctx, uint groupId)
+    {
+        var chain = MessageBuilder.Group(groupId).Text("权限不足");
         ctx.SendMessage(chain.Build());
     }
-    
+
     // 先Init后再运行
     public Task Run()
     {
-        QrCode.Instance.Client.Invoker.OnGroupMemberIncreaseEvent += (context, @event) =>
+        BotService.Instance.Client!.Invoker.OnGroupMemberIncreaseEvent += (context, @event) =>
         {
             var groupid = @event.GroupUin;
-            foreach (var chain in from message in _messageList where message.Key == groupid select MessageBuilder.Group(groupid).Text(message.Value))
-            {
-                context.SendMessage(chain.Build());
-            }
+            if (!_messageDict.TryGetValue(groupid, out var message)) return;
+            var chain = MessageBuilder.Group(groupid).Text(message);
+            context.SendMessage(chain.Build());
         };
-        QrCode.Instance.Client.Invoker.OnGroupMessageReceived += (content, @event) =>
+
+        BotService.Instance.Client.Invoker.OnGroupMessageReceived += (content, @event) =>
         {
-            var groupId = @event.Chain.GroupUin.Value;
+            var groupId = @event.Chain.GroupUin!.Value;
             var senderId = @event.Chain.FriendUin;
             var text = @event.Chain.ToPreviewText();
-            foreach (var chain in from command in _commandList where text.Equals(command.Key) select MessageBuilder.Group(groupId).Text(command.Value))
+
+            // 执行命令
+            if (_commandDict.TryGetValue(text, out var value))
             {
+                var chain = MessageBuilder.Group(groupId).Text(value);
                 content.SendMessage(chain.Build());
             }
-
 
             var today = DateTime.Today;
             var seed = today.Year ^ today.Month ^ today.Day ^ senderId;
@@ -150,57 +132,52 @@ public class Commands
 
             switch (text)
             {
-                //今日人品
+                // 今日人品
                 case "/jrrp":
-                {
-                    var chain = MessageBuilder.Group(groupId).Mention(senderId).Text( "今天的人品值是: "+random.Next(101));
+                    var chain = MessageBuilder.Group(groupId).Mention(senderId).Text("今天的人品值是: " + random.Next(101));
                     content.SendMessage(chain.Build());
                     break;
-                }
+
                 case "/modpacktoday":
                 case "/modpacktoday?":
                 case "/modpacktoday？":
-                {
-                    var chain = MessageBuilder.Group(groupId).Mention(senderId).Text(_corpus[random.Next(_corpus.Count - 1)]);
-                    content.SendMessage(chain.Build());
+                    var chain1 = MessageBuilder.Group(groupId).Mention(senderId).Text(_corpus[random.Next(_corpus.Count)]);
+                    content.SendMessage(chain1.Build());
                     break;
-                }
+
                 case "/showall":
-                {
-                    if(!_adminList.Contains(senderId))
+                    if (!_adminSet.Contains(senderId))
                     {
                         NoEnoughPermission(content, groupId);
                         break;
                     }
-                    var chain = MessageBuilder.Friend(senderId).Text(File.ReadAllText("Corpus.json")+"\n"+File.ReadAllText("Commands.json")+"\n"+File.ReadAllText("JoinMessage.json"));
-                    content.SendMessage(chain.Build());
+                    var chain2 = MessageBuilder.Friend(senderId).Text(File.ReadAllText("Corpus.json") + "\n" + File.ReadAllText("Commands.json") + "\n" + File.ReadAllText("JoinMessage.json"));
+                    content.SendMessage(chain2.Build());
                     break;
-                }
+
                 case "/reload":
-                {
                     _ = Init();
-                    var chain = MessageBuilder.Group(groupId).Text("重载完成!");
-                    content.SendMessage(chain.Build());
+                    var chain3 = MessageBuilder.Group(groupId).Text("重载完成!");
+                    content.SendMessage(chain3.Build());
                     break;
-                }
             }
 
             if (text.Contains("/addcorpus") && text.StartsWith("/addcorpus"))
             {
-                if (_adminList.Contains(senderId))
+                if (_adminSet.Contains(senderId))
                 {
                     var temp = text.Remove(0, 10);
                     if (_corpus.Contains(temp))
                     {
-                        var chain = MessageBuilder.Group(groupId).Text("已经存在: "+temp);
+                        var chain = MessageBuilder.Group(groupId).Text("已经存在: " + temp);
                         content.SendMessage(chain.Build());
                     }
                     else
                     {
-                        var chain = MessageBuilder.Group(groupId).Text("已添加: "+temp);
+                        var chain = MessageBuilder.Group(groupId).Text("已添加: " + temp);
                         _corpus.Add(temp);
                         content.SendMessage(chain.Build());
-                        SaveCorpus();
+                        _ = SaveCorpus();
                     }
                 }
                 else
@@ -211,19 +188,18 @@ public class Commands
 
             if (text.Contains("/addadmin") && text.StartsWith("/addadmin"))
             {
-                if (_adminList.Contains(senderId))
+                if (_adminSet.Contains(senderId))
                 {
                     var temp = uint.Parse(text.Remove(0, 9));
-                    if (_adminList.Contains(temp))
+                    if (!_adminSet.Add(temp))
                     {
                         var chain = MessageBuilder.Group(groupId).Text("已存在管理员: " + temp);
                         content.SendMessage(chain.Build());
                     }
                     else
                     {
-                        _adminList.Add(temp);
                         var chain = MessageBuilder.Group(groupId).Text("已添加管理员: " + temp);
-                        SaveAdmin();
+                        _ = SaveAdmin();
                         content.SendMessage(chain.Build());
                     }
                 }
@@ -232,16 +208,16 @@ public class Commands
                     NoEnoughPermission(content, groupId);
                 }
             }
-            
-            if (text.Contains("/delcorpus") && text.StartsWith("/delcorpus"))
+
+            if (!text.Contains("/delcorpus") || !text.StartsWith("/delcorpus")) return;
             {
-                if (_adminList.Contains(senderId))
+                if (_adminSet.Contains(senderId))
                 {
                     var temp = text.Remove(0, 10);
                     if (_corpus.Remove(temp))
                     {
                         var chain = MessageBuilder.Group(groupId).Text("已删除: " + temp);
-                        SaveCorpus();
+                        _ = SaveCorpus();
                         content.SendMessage(chain.Build());
                     }
                     else
@@ -256,6 +232,7 @@ public class Commands
                 }
             }
         };
+
         return Task.CompletedTask;
     }
 }
