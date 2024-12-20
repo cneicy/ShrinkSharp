@@ -1,7 +1,6 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Shrink.Command;
-using Shrink.Login;
+using Shrink.Service;
 
 namespace Shrink;
 
@@ -17,8 +16,8 @@ public static class Program
         ModifyAssembly(originalAssemblyPath, tempAssemblyPath, oldUrl, newUrl);*/
 
         await BotService.Instance.Login();
-        await Commands.Instance.Init();
-        await Commands.Instance.Run();
+        await BotPassiveMsgHandler.Instance.Init();
+        await BotPassiveMsgHandler.Instance.Run();
     }
     /*private static void ModifyAssembly(string originalAssemblyPath, string tempAssemblyPath, string oldUrl, string newUrl)
     {

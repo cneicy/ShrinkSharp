@@ -15,6 +15,7 @@
 
     <ItemGroup>
       <Compile Remove="Service\**" />
+      <Compile Include="Service\BotService.cs" />
     </ItemGroup>
 
     <ItemGroup>

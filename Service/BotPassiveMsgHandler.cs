@@ -2,24 +2,23 @@
 using Lagrange.Core.Common.Interface.Api;
 using Lagrange.Core.Message;
 using Newtonsoft.Json;
-using Shrink.Login;
 
-namespace Shrink.Command;
+namespace Shrink.Service;
 
-public class Commands
+public class BotPassiveMsgHandler
 {
-    private static Commands? _instance;
+    private static BotPassiveMsgHandler? _instance;
     private static readonly object Lock = new();
-    private Commands() { }
+    private BotPassiveMsgHandler() { }
 
-    public static Commands Instance
+    public static BotPassiveMsgHandler Instance
     {
         get
         {
             if (_instance != null) return _instance;
             lock (Lock)
             {
-                _instance ??= new Commands();
+                _instance ??= new BotPassiveMsgHandler();
             }
             return _instance;
         }
